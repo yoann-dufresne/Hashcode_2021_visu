@@ -52,7 +52,36 @@ class Solution {
   }
 
   compute_lights() {
+    let max_time = Math.ceil(this.pb.D * 1.1);
+    for (let inter_idx=0 ; inter_idx<this.pb.I ; inter_idx++) {
+      // Intersection absent from the output : All red
+      if (this.cycles[inter_idx] == undefined) {
+        for (let street of this.pb.intersections[inter_idx].input_streets) {
+          this.lights[street.name] = [...Array(max_time)].map(x=>false);
+        }
+      }
+      // Intersection present
+      else {
+        let cycle = this.cycles[inter_idx];
+        let cycle_time = cycle.map(x=>x[1]).reduce((x,y)=>x+y);
+        let cycle_green = cycle.map(x=>[...Array(x[1])].map(y=>x[0])).reduce((x,y)=>x.concat(y));
 
+        for (let street of this.pb.intersections[inter_idx].input_streets) {
+          this.lights[street.name] = [];
+        }
+        
+        for (let t_idx=0 ; t_idx<max_time ; t_idx++) {
+          let green_street = cycle_green[t_idx % cycle_time];
+          for (let street of this.pb.intersections[inter_idx].input_streets) {
+            this.lights[street.name].push(street.name == green_street);   
+          }
+        }
+      }
+    }
+  }
+
+  compute_cars() {
+    
   }
 }
 
@@ -99,26 +128,29 @@ document.getElementById("problem").onchange = problem_select;
 
 let problem_names = ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt"];
 function parse_solution(file_content) {
-  // if 
   let sol = new Solution(problem);
 
   let lines = file_content.split("\n");
   let intersection_used = Number(lines[0]);
   for (let idx=1 ; idx<lines.length ; idx++) {
+    if (lines[idx] == "")
+      continue;
     let inter_idx = Number(lines[idx++]);
     let nb_traffic_lights = Number(lines[idx++]);
     let cycle = [];
     for (let tl_idx=0 ; tl_idx<nb_traffic_lights ; tl_idx++, idx++) {
-      pair = lines[idx].split(" ");
+      let pair = lines[idx].split(" ");
       pair[1] = Number(pair[1]);
       cycle.push(pair);
     }
+    idx--;
     sol.cycles[inter_idx] = cycle;
   }
 
   solution = sol;
   console.log(sol);
   console.log("--- Solution loaded ---")
+  sol.compute_lights();
   return sol;
 }
 
@@ -146,3 +178,8 @@ function solution_upload(event) {
 document.getElementById("solution").onchange = solution_upload;
 
 
+// ---- Debug to remove ----
+
+let sol_txt = "3\n2\n1\nrue-de-moscou 1\n0\n1\nrue-de-londres 1\n1\n2\nrue-d-athenes 1\nrue-d-amsterdam 1\n";
+document.getElementById("problem").value = "a.txt";
+document.getElementById("problem").onchange(()=>{parse_solution(sol_txt);});
