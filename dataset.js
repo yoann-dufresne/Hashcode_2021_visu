@@ -117,7 +117,7 @@ function problem_select(callback=()=>{}) {
     return;
 
   console.log("loading problem " + filename);
-  fetch("/data/" + filename)
+  fetch("data/" + filename)
   .then(response => response.text())
   .then(txt => parse_problem(txt))
   .then(pb => problem = pb)
