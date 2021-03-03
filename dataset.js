@@ -81,7 +81,13 @@ class Solution {
   }
 
   compute_cars() {
-    
+    // Precomputation
+    let max_time = Math.ceil(this.pb.D * 1.1);
+
+    // Run the simulation
+    for (let t=0 ; t<max_time ; t++) {
+
+    }
   }
 }
 
@@ -121,7 +127,7 @@ function problem_select(callback=()=>{}) {
   .then(response => response.text())
   .then(txt => parse_problem(txt))
   .then(pb => problem = pb)
-  .then(()=>{callback();});
+  .then(()=>{if (typeof callback == "function") callback();});
 }
 document.getElementById("problem").onchange = problem_select;
 
