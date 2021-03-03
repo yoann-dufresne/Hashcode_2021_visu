@@ -88,11 +88,13 @@ class Solution {
         }
       }
     }
+
+    return true;
   }
 
   compute_cars() {
     // --- Precomputation ---
-    let max_time = Math.ceil(this.pb.D * 1.1);
+    let max_time = Math.ceil((this.pb.D+1) * 1.1);
     this.car_positions = [[...Array(this.pb.V).map(x=>null)]];
 
     // Create one car stack for each end of street
@@ -109,7 +111,7 @@ class Solution {
     }
     
     // --- Run the simulation ---
-    for (let t=1 ; t<max_time ; t++) {
+    for (let t=1 ; t<=max_time ; t++) {
       // Add a new line for car positions
       this.car_positions.push([...Array(this.pb.V).map(x=>null)]);
       let to_push = [];
@@ -130,7 +132,8 @@ class Solution {
           this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position+1];
           // At the end of the road
           if (street_position+1 == street.time-1) {
-            to_push.push([street.name, car.idx]);
+            if (!(street.time == 1 && car.streets[car.streets.length-1] == street.name))
+              to_push.push([street.name, car.idx]);
             // stacked_cars[street.name].push(car.idx);
           }
         } else {
@@ -163,10 +166,31 @@ class Solution {
         }
       }
 
-      for (let i=0 ; i<to_push.length ; i++)
+      for (let i=0 ; i<to_push.length ; i++) {
         stacked_cars[to_push[i][0]].push(to_push[i][1]);
+      }
     }
-    console.log(this.car_positions);
+
+    return true;
+  }
+
+  compute_score() {
+    let score = 0;
+    let finished_time = this.pb.D+1;
+
+    for (let car_idx=0 ; car_idx<this.pb.V ; car_idx++) {
+      if (this.car_positions[finished_time][car_idx][0] == null) {
+        score += this.pb.F;
+
+        let idx = finished_time-1;
+        while(this.car_positions[idx][car_idx][0] == null) {
+          score += 1;
+          idx--;
+        }
+      }
+    }
+
+    return score;
   }
 }
 
@@ -240,8 +264,10 @@ function parse_solution(file_content) {
   solution = sol;
   console.log(sol);
   console.log("--- Solution loaded ---")
-  sol.compute_lights();
-  sol.compute_cars();
+
+  let val = sol.compute_lights();
+  val = sol.compute_cars(val);
+  console.log("score: ", sol.compute_score(val));
   return sol;
 }
 
