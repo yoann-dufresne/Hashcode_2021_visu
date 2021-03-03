@@ -21,8 +21,18 @@ class Street {
 }
 
 class Car {
-  constructor(streets) {
+  constructor(idx, streets) {
+    this.idx = idx;
     this.streets = streets;
+  }
+
+  next_street(street_name) {
+    for (let i=0 ; i<this.streets.length-1 ; i++) {
+      if (this.streets[i] == street_name) {
+        return this.streets[i+1];
+      }
+    }
+    return null;
   }
 }
 
@@ -81,15 +91,88 @@ class Solution {
   }
 
   compute_cars() {
-    // Precomputation
+    // --- Precomputation ---
     let max_time = Math.ceil(this.pb.D * 1.1);
+    this.car_positions = [[...Array(this.pb.V).map(x=>null)]];
 
-    // Run the simulation
-    for (let t=0 ; t<max_time ; t++) {
-
+    // Create one car stack for each end of street
+    let stacked_cars = {};
+    for (let st of Object.values(this.pb.streets)) {
+      stacked_cars[st.name] = [];
     }
+
+    // Fill the stacks for the beginning of the simulation
+    for (let car of this.pb.cars) {
+      let street = this.pb.streets[car.streets[0]];
+      this.car_positions[0][car.idx] = [street.name, street.time-1];
+      stacked_cars[street.name].push(car.idx);
+    }
+    
+    // --- Run the simulation ---
+    for (let t=1 ; t<max_time ; t++) {
+      // Add a new line for car positions
+      this.car_positions.push([...Array(this.pb.V).map(x=>null)]);
+      let to_push = [];
+
+      // Move cars on roads
+      let previous_positions = this.car_positions[this.car_positions.length - 2];
+      for (let car of this.pb.cars) {
+        let street_name = previous_positions[car.idx][0];
+        if (street_name == null) {
+          this.car_positions[this.car_positions.length-1][car.idx] = previous_positions[car.idx];
+          continue;
+        }
+
+        let street = this.pb.streets[street_name];
+        let street_position = previous_positions[car.idx][1];
+        if (street_position + 1 < street.time) {
+          // One unit move
+          this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position+1];
+          // At the end of the road
+          if (street_position+1 == street.time-1) {
+            to_push.push([street.name, car.idx]);
+            // stacked_cars[street.name].push(car.idx);
+          }
+        } else {
+          // No move
+          this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position];
+        }
+      }
+
+      // Move cars at the first position of each intersection with green light
+      for (let street_name of Object.keys(this.lights)) {
+        // Green light and at least one car
+        if (this.lights[street_name] && stacked_cars[street_name].length > 0) {
+          // Remove the first waiting car from the street.
+          let car = this.pb.cars[stacked_cars[street_name].shift()];
+          let next_street = car.next_street(street_name);
+
+
+          // End of the travel
+          if (next_street == null)
+            this.car_positions[this.car_positions.length-1][car.idx] = [null];
+          // Change the street
+          else {
+            this.car_positions[this.car_positions.length-1][car.idx] = [next_street, 0];
+
+            // Is it directly the traffic light ?
+            if (this.pb.streets[next_street].time == 1) {
+              to_push.push([next_street, car.idx]);
+            }
+          }
+        }
+      }
+
+      for (let i=0 ; i<to_push.length ; i++)
+        stacked_cars[to_push[i][0]].push(to_push[i][1]);
+    }
+    console.log(this.car_positions);
   }
 }
+
+
+
+
 
 
 function parse_problem(file_content) {
@@ -106,8 +189,9 @@ function parse_problem(file_content) {
   }
 
   let car_lines = lines.slice(problem.S+1, problem.S+1+problem.V);
+  let car_idx=0;
   for (let line of car_lines) {
-    problem.cars.push(new Car(line.split(" ").slice(1)));
+    problem.cars.push(new Car(car_idx++, line.split(" ").slice(1)));
   }
 
   console.log(problem);
@@ -157,6 +241,7 @@ function parse_solution(file_content) {
   console.log(sol);
   console.log("--- Solution loaded ---")
   sol.compute_lights();
+  sol.compute_cars();
   return sol;
 }
 
