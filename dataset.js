@@ -132,20 +132,23 @@ class Solution {
           this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position+1];
           // At the end of the road
           if (street_position+1 == street.time-1) {
-            if (!(street.time == 1 && car.streets[car.streets.length-1] == street.name))
+            if (street.time != 1 || car.streets[car.streets.length-1] != street.name)
               to_push.push([street.name, car.idx]);
             // stacked_cars[street.name].push(car.idx);
           }
         } else {
           // No move
-          this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position];
+          if (street_name == car.streets[car.streets.length-1]) {
+            this.car_positions[this.car_positions.length-1][car.idx] = [null];
+          } else
+            this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position];
         }
       }
 
       // Move cars at the first position of each intersection with green light
       for (let street_name of Object.keys(this.lights)) {
         // Green light and at least one car
-        if (this.lights[street_name] && stacked_cars[street_name].length > 0) {
+        if (this.lights[street_name][t-1] && stacked_cars[street_name].length > 0) {
           // Remove the first waiting car from the street.
           let car = this.pb.cars[stacked_cars[street_name].shift()];
           let next_street = car.next_street(street_name);
