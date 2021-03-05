@@ -45,13 +45,174 @@ class Problem {
     this.V = Number(v);
     this.F = Number(f);
 
-    this.intersections = {};
+    this.intersections = new Map();
     for (let i=0 ; i<this.I ; i++)
       this.intersections[i] = new Intersection(i);
-    this.streets = {};
+    this.streets = new Map();
     this.cars = [];
   }
 }
+
+
+class Light {
+  constructor(start, duration, cycle) {
+    this.start = start;
+    this.duration = duration;
+    this.cycle = cycle;
+    this.net = 0; // Not early than
+  }
+
+  is_green(time) {
+    let reduced = time % this.cycle;
+    console.log(reduced);
+
+    if (reduced >= this.start && reduced < this.start + this.duration)
+      return true;
+    else
+      return false;
+  }
+
+  next_green(time) {
+    // Not before net !
+    if (time < this.net)
+      time = this.net;
+
+    let reduced = time % this.cycle;
+    if (reduced < this.start)
+      return time + this.start - reduced;
+    else if (reduced >= this.start + this.duration)
+      return time + this.cycle - reduced + this.start;
+    else
+      return time;
+  }
+
+  update_net(time) {
+    this.net = time;
+  }
+}
+
+class CarPosition {
+  constructor(car) {
+    this.car = car;
+    this.time = 0;
+    this.path_idx = 0;
+  }
+
+  inf(car_pos) {
+    return this.time < car_pos.time;
+  }
+}
+
+function search_position(car_pos, array) {
+  for (let i=0 ; i<array.length ; i++)
+    if (car_pos.inf(array[i]))
+      return i;
+  return array.length;
+}
+
+class SolutionFast {
+  constructor(problem) {
+    this.pb = problem;
+    this.lights = new Map();
+    this.score = 0;
+  }
+
+  add_cycle(cycle) {
+    for (let i=0 ; i<cycle.length ; i++) {
+      let cycle_duration = cycle.map(x=>x[1]).reduce((x,y)=>x+y);
+      let start_time = 0;
+      for (let pair of cycle) {
+        let street = pair[0];
+        let duration = pair[1];
+
+        this.lights[street] = new Light(start_time, duration, cycle_duration);
+        start_time += duration;
+      }
+    }
+  }
+
+  car_step(car_pos) {
+    let current_light = this.lights[car_pos.car.streets[car_pos.path_idx]];
+    if (current_light == undefined)
+      return null;
+    // 1 - Next Green ?
+    let green_time = current_light.next_green(car_pos.time);
+
+    // 2 - Update Light
+    current_light.update_net(green_time+1);
+
+    // 3 - move to next street
+    let next_street = this.pb.streets[car_pos.car.streets[car_pos.path_idx+1]];
+    car_pos.path_idx += 1;
+    car_pos.time = green_time + next_street.time;
+
+    // 4 - Car over ?
+    if (car_pos.path_idx == car_pos.car.streets.length-1) {
+      // Final street => compute score
+      if (car_pos.time <= this.pb.D) {
+        this.score += this.pb.F + this.pb.D - car_pos.time;
+      }
+
+      return null;
+    } else {
+      return car_pos;
+    }
+  }
+
+  compute() {
+    // Init
+    let car_positions = [];
+    for (let car of this.pb.cars) {
+      car_positions.push(new CarPosition(car));
+    }
+
+    // Compute until all cars over
+    while (car_positions.length > 0) {
+      let current = car_positions.shift();
+      let next = this.car_step(current);
+
+      if (next != null) {
+        let idx = search_position(next, car_positions);
+        car_positions.splice(idx, 0, next);
+      }
+    }
+
+    return this.score;
+  }
+}
+
+
+function parse_solution(file_content) {
+  let sol = new SolutionFast(problem);
+
+  let lines = file_content.split("\n");
+  let intersection_used = Number(lines[0]);
+  for (let idx=1 ; idx<lines.length ; idx++) {
+    if (lines[idx] == "")
+      continue;
+    let inter_idx = Number(lines[idx++]);
+    let nb_traffic_lights = Number(lines[idx++]);
+    let cycle = [];
+    for (let tl_idx=0 ; tl_idx<nb_traffic_lights ; tl_idx++, idx++) {
+      let pair = lines[idx].split(" ");
+      pair[1] = Number(pair[1]);
+      cycle.push(pair);
+    }
+    idx--;
+    sol.add_cycle(cycle);
+  }
+
+  solution = sol;
+  console.log(sol);
+  console.log("--- Solution loaded ---");
+
+  return sol;
+}
+
+
+
+
+
 
 
 class Solution {
@@ -132,7 +293,7 @@ class Solution {
           this.car_positions[this.car_positions.length-1][car.idx] = [street_name, street_position+1];
           // At the end of the road
           if (street_position+1 == street.time-1) {
-            if (street.time != 1 || car.streets[car.streets.length-1] != street.name)
+            if (car.streets[car.streets.length-1] != street.name)
               to_push.push([street.name, car.idx]);
             // stacked_cars[street.name].push(car.idx);
           }
@@ -244,35 +405,35 @@ document.getElementById("problem").onchange = problem_select;
 
 
 let problem_names = ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt"];
-function parse_solution(file_content) {
-  let sol = new Solution(problem);
+// function parse_solution(file_content) {
+//   let sol = new Solution(problem);
 
-  let lines = file_content.split("\n");
-  let intersection_used = Number(lines[0]);
-  for (let idx=1 ; idx<lines.length ; idx++) {
-    if (lines[idx] == "")
-      continue;
-    let inter_idx = Number(lines[idx++]);
-    let nb_traffic_lights = Number(lines[idx++]);
-    let cycle = [];
-    for (let tl_idx=0 ; tl_idx<nb_traffic_lights ; tl_idx++, idx++) {
-      let pair = lines[idx].split(" ");
-      pair[1] = Number(pair[1]);
-      cycle.push(pair);
-    }
-    idx--;
-    sol.cycles[inter_idx] = cycle;
-  }
+//   let lines = file_content.split("\n");
+//   let intersection_used = Number(lines[0]);
+//   for (let idx=1 ; idx<lines.length ; idx++) {
+//     if (lines[idx] == "")
+//       continue;
+//     let inter_idx = Number(lines[idx++]);
+//     let nb_traffic_lights = Number(lines[idx++]);
+//     let cycle = [];
+//     for (let tl_idx=0 ; tl_idx<nb_traffic_lights ; tl_idx++, idx++) {
+//       let pair = lines[idx].split(" ");
+//       pair[1] = Number(pair[1]);
+//       cycle.push(pair);
+//     }
+//     idx--;
+//     sol.cycles[inter_idx] = cycle;
+//   }
 
-  solution = sol;
-  console.log(sol);
-  console.log("--- Solution loaded ---")
+//   solution = sol;
+//   console.log(sol);
+//   console.log("--- Solution loaded ---")
 
-  let val = sol.compute_lights();
-  val = sol.compute_cars(val);
-  console.log("score: ", sol.compute_score(val));
-  return sol;
-}
+//   let val = sol.compute_lights();
+//   val = sol.compute_cars(val);
+//   console.log("score: ", sol.compute_score(val));
+//   return sol;
+// }
 
 function solution_upload(event) {
   let file = event.target.files[0];
