@@ -6,7 +6,7 @@
 
   <title>Traffic Signaling - Google hashcode 2021 visu</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=1.0">
+  <link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -32,16 +32,16 @@
     <option value="e.txt">e.txt</option>
     <option value="f.txt">f.txt</option>
   </select></p>
+  <p>If your solution filename starts with the problem name, it will be automatically loaded. (example: b.txt_my_solution.txt)</p>
   <p>Solution: <input type="file" id="solution" /></p>
-
   <h2>Visualization</h2>
 
   <div id="global"></div>
-
-  <div id="cars_schedule"></div>
+  <canvas id="car_schedule"></canvas>
 
 </body>
 
+<script type="text/javascript" src="drawing.js"></script>
 <script type="text/javascript" src="dataset.js"></script>
 
 </html>

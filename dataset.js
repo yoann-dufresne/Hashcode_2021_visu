@@ -115,6 +115,9 @@ class SolutionFast {
     this.pb = problem;
     this.lights = new Map();
     this.score = 0;
+    this.car_journeys = [];
+    for (let i=0 ; i<this.pb.V ; i++)
+      this.car_journeys.push([]);
   }
 
   add_cycle(cycle) {
@@ -133,10 +136,16 @@ class SolutionFast {
 
   car_step(car_pos) {
     let current_light = this.lights[car_pos.car.streets[car_pos.path_idx]];
-    if (current_light == undefined)
+    if (current_light == undefined) {
+      this.car_journeys[car_pos.car.idx].push(Math.max(0, this.pb.D - car_pos.time));
+      this.car_journeys[car_pos.car.idx].push(0);
+      this.car_journeys[car_pos.car.idx].push(0);
       return null;
+    }
+    
     // 1 - Next Green ?
     let green_time = current_light.next_green(car_pos.time);
+    this.car_journeys[car_pos.car.idx].push(green_time - car_pos.time);
 
     // 2 - Update Light
     current_light.update_net(green_time+1);
@@ -145,14 +154,16 @@ class SolutionFast {
     let next_street = this.pb.streets[car_pos.car.streets[car_pos.path_idx+1]];
     car_pos.path_idx += 1;
     car_pos.time = green_time + next_street.time;
+    this.car_journeys[car_pos.car.idx].push(next_street.time);
 
     // 4 - Car over ?
     if (car_pos.path_idx == car_pos.car.streets.length-1) {
       // Final street => compute score
       if (car_pos.time <= this.pb.D) {
+        this.car_journeys[car_pos.car.idx].push(this.pb.F + this.pb.D - car_pos.time);
         this.score += this.pb.F + this.pb.D - car_pos.time;
-      }
-
+      } else
+        this.car_journeys[car_pos.car.idx].push(0);
       return null;
     } else {
       return car_pos;
@@ -203,9 +214,10 @@ function parse_solution(file_content) {
   }
 
   solution = sol;
-  console.log(sol);
+  // console.log(sol);
   console.log("--- Solution loaded ---");
-  console.log(sol.compute());
+  let score = sol.compute();
+  console.log("score ", score);
 
   return sol;
 }
@@ -231,7 +243,7 @@ function parse_problem(file_content) {
     problem.cars.push(new Car(car_idx++, line.split(" ").slice(1)));
   }
 
-  console.log(problem);
+  // console.log(problem);
   console.log("--- problem loaded ---");
 
   return problem;
@@ -254,26 +266,30 @@ document.getElementById("problem").onchange = problem_select;
 
 
 let problem_names = ["a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt"];
-
+let current_pb = null;
 function solution_upload(event) {
   let file = event.target.files[0];
 
-  if (problem == null) {
-    for (let pb_name of problem_names) {
-      if (file.name.startsWith(pb_name)) {
-        let pb_select = document.getElementById("problem");
-        pb_select.value = pb_name;
-        pb_select.onchange(()=>{solution_upload(event)});
-        return;
-      }
-    }
+  let pb_name = file.name.slice(0, 5);
+  if (current_pb == null && !problem_names.includes(pb_name)) {
     alert("A problem must be loaded first");
     return;
+  } else if (pb_name != current_pb && problem_names.includes(pb_name)) {
+    let pb_select = document.getElementById("problem");
+    pb_select.value = pb_name
+    current_pb = pb_name;
+    pb_select.onchange(()=>{solution_upload(event)});
+    return;
   }
+
   console.log("loading " + file.name);
 
   var reader = new FileReader();
-  reader.onload = (evt) => {parse_solution(evt.target.result);};
+  reader.onload = (evt) => {
+    let sol = parse_solution(evt.target.result);
+    let tracks = new CarTracks(sol);
+    tracks.draw();
+  };
   reader.readAsText(file);
 }
 document.getElementById("solution").onchange = solution_upload;
@@ -283,4 +299,8 @@ document.getElementById("solution").onchange = solution_upload;
 
 let sol_txt = "3\n2\n1\nrue-de-moscou 1\n0\n1\nrue-de-londres 1\n1\n2\nrue-d-athenes 1\nrue-d-amsterdam 1\n";
 document.getElementById("problem").value = "a.txt";
-document.getElementById("problem").onchange(()=>{parse_solution(sol_txt);});
+document.getElementById("problem").onchange(()=>{
+    let sol = parse_solution(sol_txt);
+    let tracks = new CarTracks(sol);
+    tracks.draw();
+  });
