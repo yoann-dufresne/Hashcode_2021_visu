@@ -45,6 +45,7 @@ class Track {
 
 class CarTracks {
   constructor(solution) {
+    this.solution = solution;
     this.tracks = [];
     this.max_time = 0;
     let journeys = solution.car_journeys;
@@ -85,5 +86,8 @@ class CarTracks {
       track.draw(ctx, x, y, width, px_unit);
       x += width + space;
     }
+
+    ctx.fillStyle = "violet";
+    ctx.fillRect(0, this.solution.pb.D, canvas_width, 3);
   }
 }
