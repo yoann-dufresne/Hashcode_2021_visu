@@ -91,3 +91,16 @@ class CarTracks {
     ctx.fillRect(0, this.solution.pb.D, canvas_width, 3);
   }
 }
+
+class GlobalStats {
+  constructor(solution) {
+    this.sol = solution;
+  }
+
+  print() {
+    let global_div = document.getElementById("global");
+    global_div.innerHTML = "";
+    let score = document.createTextNode("Score: " + this.sol.score);
+    global_div.append(score);
+  }
+}
