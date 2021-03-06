@@ -46,6 +46,7 @@ class Track {
 class CarTracks {
   constructor(solution) {
     this.solution = solution;
+    this.div = document.getElementById("cars");
     this.tracks = [];
     this.max_time = 0;
     let journeys = solution.car_journeys;
@@ -65,10 +66,8 @@ class CarTracks {
     }
   }
 
-  draw() {
+  draw(width=5, px_unit=1) {
     let space = 1;
-    let width = 5;
-    let px_unit = 1;
 
     let canvas_width = this.tracks.length * (width + space); 
     let canvas_height = this.max_time * px_unit;
@@ -92,6 +91,52 @@ class CarTracks {
   }
 }
 
+
+class IntersectionView {
+  constructor(solution, max_time) {
+    this.sol = solution;
+
+    this.street_wait = new Map();
+    for (let car of solution.pb.cars) {
+      let journey = solution.car_journeys[car.idx];
+
+      // Compute waiting segments per street
+      let time = 0;
+      for (let i=0 ; i<journey.length-1 ; i ++) {
+        // If wait due to a light
+        if (i % 2 == 0 && journey[i] > 0) {
+          let street = car.streets[i/2];
+
+          // New street
+          if (this.street_wait[street] == undefined)
+            this.street_wait[street] = [];
+
+          // Add the waiting segment
+          this.street_wait[street].push([time, time + journey[i]]);
+        }
+
+        time += journey[i];
+      }
+    }
+
+    // Compute waiting lists per intersection
+    this.inter_waits = new Map();
+    for (let inter_idx=0 ; inter_idx<this.sol.pb.I ; inter_idx++) {
+      let inter = this.sol.pb.intersections[inter_idx];
+
+      this.inter_waits[inter_idx] = new Map();
+      for (let street of inter.input_streets) {
+        if (this.street_wait[street.name] != undefined) {
+          this.inter_waits[inter_idx][street.name] = this.street_wait[street.name];
+        } else {
+          this.inter_waits[inter_idx][street.name] = [];
+        }
+      }
+    }
+  }
+}
+
+
 class GlobalStats {
   constructor(solution) {
     this.sol = solution;
@@ -102,5 +147,18 @@ class GlobalStats {
     global_div.innerHTML = "";
     let score = document.createTextNode("Score: " + this.sol.score);
     global_div.append(score);
+  }
+}
+
+
+class SolutionViewer {
+  constructor(solution) {
+    this.sol = solution;
+    this.stats = new GlobalStats(solution);
+    this.stats.print();
+    this.car_view = new CarTracks(solution);
+    this.car_view.draw();
+    this.inter_view = new IntersectionView(solution, this.car_view.max_time);
+    console.log(this.inter_view);
   }
 }

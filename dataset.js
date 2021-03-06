@@ -1,5 +1,6 @@
 var problem = null;
 var solution = null;
+var viewer = null;
 
 
 class Intersection {
@@ -287,10 +288,7 @@ function solution_upload(event) {
   var reader = new FileReader();
   reader.onload = (evt) => {
     let sol = parse_solution(evt.target.result);
-    let stats = new GlobalStats(sol);
-    stats.print();
-    let tracks = new CarTracks(sol);
-    tracks.draw();
+    viewer = new SolutionViewer(sol);
   };
   reader.readAsText(file);
 }
@@ -303,8 +301,5 @@ let sol_txt = "3\n2\n1\nrue-de-moscou 1\n0\n1\nrue-de-londres 1\n1\n2\nrue-d-ath
 document.getElementById("problem").value = "a.txt";
 document.getElementById("problem").onchange(()=>{
     let sol = parse_solution(sol_txt);
-    let stats = new GlobalStats(sol);
-    stats.print();
-    let tracks = new CarTracks(sol);
-    tracks.draw();
+    viewer = new SolutionViewer(sol);
   });
